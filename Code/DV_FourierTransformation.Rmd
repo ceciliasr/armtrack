@@ -1,0 +1,244 @@
+---
+title: 'DV: Fourier Transformation'
+output: html_document
+---
+
+```{r, warning=FALSE, message=FALSE,eval=T, echo=F,results="hide"}
+#Installing package
+install.packages("c:/TFM/Code/armtrack_0.0.0.9000.tar.gz", repos = NULL, type = "source")
+library(armtrack)
+
+if (!require("ggplot2"))
+  {
+  install.packages("ggplot2")
+  library(ggplot2)
+}
+if (!require("gridExtra"))
+{
+  install.packages("gridExtra")
+  library(gridExtra)
+}
+if (!require("grid"))
+{
+  install.packages("grid")
+  library(grid)
+}
+if (!require("plotly"))
+{
+  install.packages("plotly")
+  library(plotly)
+}
+if (!require("signal"))
+{
+  install.packages("signal")
+  library(signal)
+}
+if (!require("oce"))
+{
+  install.packages("oce")
+  library(oce)
+}
+if (!require("eegkit"))
+{
+  install.packages("eegkit")
+  library(eegkit)
+}
+load("c:/TFM/Data/pca_BMD.rda")
+load("c:/TFM/Data/pca_HD.rda")
+```
+
+Joseph Fourier showed that any periodic wave can be represented by a sum of simple sine waves. As our wave is not periodic, we can apply the Fourier transform that provides the means to convert a signal from its representation in the time (as it is most often measured) to its representation in the frequency domain.
+
+Given a trajectory the fourier transform (FT) breaks it into a set of related cycles that describes it. Each cycle has a strength, a delay and a speed. These cycles are easier to handle, ie, compare, modify, simplify, and if needed, they can be used to reconstruct the original trajectory.
+
+The Fourier transform of an integrable function $f:\mathbb{R}\rightarrow\mathbb{C}$ is:
+$$
+\hat{f}(\xi)=\int_{-\infty}^{\infty}f(x)e^{-2\pi ix\xi}dx 
+$$
+
+**SPECTOGRAM of first principal component (PC1)**
+
+In order to view the frequencies of movement over time, we have performed a spectogram of the first component of the PCA which we have performed before. With this first principal component, we have more or less the 50% of the variability of data explained, so it is more representative than doing a spectogram of a simple variable. We have plotted the spectogram first with BMDistrophy Data and then with healthy data:
+
+```{r, warning=FALSE, message=FALSE,eval=T,echo=F}
+se<-seq(0,nrow(pca_BMD),50) #freq=1seg
+pca_BMD1<-pca_BMD[rownames(pca_BMD) %in% se,]
+
+par(mfrow=c(2,2))
+
+# number of points to use for the fft
+nfft=1024
+# overlap (in points)
+overlap=128
+# create spectrogram
+spec = specgram(x = pca_BMD1$PC1,n = nfft,Fs = 1,overlap = overlap)
+# discard phase information
+P = abs(spec$S)
+# normalize
+P = P/max(P)
+# convert to dB
+P = 10*log10(P)
+# config time axis
+t = spec$t
+# plot spectrogram
+imagep(x = t,y = spec$f,z = t(P),col = oce.colorsViridis,ylab = 'Frequency [Hz]',xlab = 'Time [s]',drawPalette = T,decimate = F,
+       main="Aprox. 6h")
+
+pca_BMD2<-pca_BMD[1:579195,]#3h
+se<-seq(0,nrow(pca_BMD2),50) #freq=1seg
+pca_BMD2<-pca_BMD2[rownames(pca_BMD2) %in% se,]
+
+# create spectrogram
+spec = specgram(x = pca_BMD2$PC1,n = nfft,Fs = 1,overlap = overlap)
+# discard phase information
+P = abs(spec$S)
+# normalize
+P = P/max(P)
+# convert to dB
+P = 10*log10(P)
+# config time axis
+t = spec$t
+# plot spectrogram
+imagep(x = t,y = spec$f,z = t(P),col = oce.colorsViridis,ylab = 'Frequency [Hz]',xlab = 'Time [s]',drawPalette = T,decimate = F,
+       main="Aprox. 3h")
+
+pca_BMD3<-pca_BMD[1:289597,]#1.5h
+se<-seq(0,nrow(pca_BMD3),50) #freq=1seg
+pca_BMD3<-pca_BMD3[rownames(pca_BMD3) %in% se,]
+
+# create spectrogram
+spec = specgram(x = pca_BMD3$PC1,n = nfft,Fs = 1,overlap = overlap)
+# discard phase information
+P = abs(spec$S)
+# normalize
+P = P/max(P)
+# convert to dB
+P = 10*log10(P)
+# config time axis
+t = spec$t
+# plot spectrogram
+imagep(x = t,y = spec$f,z = t(P),col = oce.colorsViridis,ylab = 'Frequency [Hz]',xlab = 'Time [s]',drawPalette = T,decimate = F,
+       main="Aprox. 1h30min")
+
+pca_BMD4<-pca_BMD[1:144798,]#45min
+se<-seq(0,nrow(pca_BMD4),50) #freq=1seg
+pca_BMD4<-pca_BMD4[rownames(pca_BMD4) %in% se,]
+
+# create spectrogram
+spec = specgram(x = pca_BMD4$PC1,n = nfft,Fs = 1,overlap = overlap)
+# discard phase information
+P = abs(spec$S)
+# normalize
+P = P/max(P)
+# convert to dB
+P = 10*log10(P)
+# config time axis
+t = spec$t
+# plot spectrogram
+imagep(x = t,y = spec$f,z = t(P),col = oce.colorsViridis,ylab = 'Frequency [Hz]',xlab = 'Time [s]',drawPalette = T,decimate = F,
+       main="Aprox. 45min")
+
+title('PC1 BMDistrophy Data', outer = TRUE,line=-0.8)
+```
+
+Let's see how the PC1 behaves in healthy data:
+```{r, warning=FALSE, message=FALSE,eval=T,echo=F}
+se<-seq(0,nrow(pca_HD),50) #freq=1seg
+pca_HD1<-pca_HD[rownames(pca_HD) %in% se,]
+
+par(mfrow=c(2,2))
+
+# number of points to use for the fft
+nfft=1024
+# overlap (in points)
+overlap=128
+# create spectrogram
+spec = specgram(x = pca_HD1$PC1,n = nfft,Fs = 1,overlap = overlap)
+# discard phase information
+P = abs(spec$S)
+# normalize
+P = P/max(P)
+# convert to dB
+P = 10*log10(P)
+# config time axis
+t = spec$t
+# plot spectrogram
+imagep(x = t,y = spec$f,z = t(P),col = oce.colorsViridis,ylab = 'Frequency [Hz]',xlab = 'Time [s]',drawPalette = T,decimate = F,
+       main="Aprox. 6h")
+
+pca_HD2<-pca_HD[1:579195,]#3h
+se<-seq(0,nrow(pca_HD2),50) #freq=1seg
+pca_HD2<-pca_HD2[rownames(pca_HD2) %in% se,]
+
+# create spectrogram
+spec = specgram(x = pca_HD2$PC1,n = nfft,Fs = 1,overlap = overlap)
+# discard phase information
+P = abs(spec$S)
+# normalize
+P = P/max(P)
+# convert to dB
+P = 10*log10(P)
+# config time axis
+t = spec$t
+# plot spectrogram
+imagep(x = t,y = spec$f,z = t(P),col = oce.colorsViridis,ylab = 'Frequency [Hz]',xlab = 'Time [s]',drawPalette = T,decimate = F,
+       main="Aprox. 3h")
+
+pca_HD3<-pca_HD[1:289597,]#1.5h
+se<-seq(0,nrow(pca_HD3),50) #freq=1seg
+pca_HD3<-pca_HD3[rownames(pca_HD3) %in% se,]
+
+# create spectrogram
+spec = specgram(x = pca_HD3$PC1,n = nfft,Fs = 1,overlap = overlap)
+# discard phase information
+P = abs(spec$S)
+# normalize
+P = P/max(P)
+# convert to dB
+P = 10*log10(P)
+# config time axis
+t = spec$t
+# plot spectrogram
+imagep(x = t,y = spec$f,z = t(P),col = oce.colorsViridis,ylab = 'Frequency [Hz]',xlab = 'Time [s]',drawPalette = T,decimate = F,
+       main="Aprox. 1h30min")
+
+pca_HD4<-pca_HD[1:144798,]#45min
+se<-seq(0,nrow(pca_HD4),50) #freq=1seg
+pca_HD4<-pca_HD4[rownames(pca_HD4) %in% se,]
+
+# create spectrogram
+spec = specgram(x = pca_HD4$PC1,n = nfft,Fs = 1,overlap = overlap)
+# discard phase information
+P = abs(spec$S)
+# normalize
+P = P/max(P)
+# convert to dB
+P = 10*log10(P)
+# config time axis
+t = spec$t
+# plot spectrogram
+imagep(x = t,y = spec$f,z = t(P),col = oce.colorsViridis,ylab = 'Frequency [Hz]',xlab = 'Time [s]',drawPalette = T,decimate = F,
+       main="Aprox. 45min")
+
+title('PC1 Healthy Data', outer = TRUE,line=-0.8)
+```
+
+**Power Spectral Density (PSD)**
+
+Now, let's see the Power Spectral density in order to see where the frequency peaks are in each type of data. First, we look at the total database and then only with the first minut of data. Let's see it with the PC1 variable also:
+
+```{r}
+par(mfrow=c(2,2))
+n <- 50                            # 50 Hz signal
+
+#title('Total data', outer = TRUE,line=-0.8)
+eegpsd(pca_BMD$PC1, Fs = 50, upper = 5,pch=20,main="BMDistrophy")
+eegpsd(pca_HD$PC1, Fs = 50, upper = 5,pch=20,main="Healthy")
+
+#title('First min. of data', outer = TRUE,line=-0.8)
+pca_HD4<-pca_HD[1:3000,]#1min
+pca_BMD4<-pca_BMD[1:3000,]#1min
+eegpsd(pca_BMD4$PC1, Fs = 50, upper = 5, pch=20,main="BMDistrophy")
+eegpsd(pca_HD4$PC1, Fs = 50, upper = 5,pch=20,main="Healthy")
+```
+

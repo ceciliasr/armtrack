@@ -1,0 +1,65 @@
+---
+title: "DV_HeatMap"
+output: html_document
+---
+```{r, warning=FALSE, message=FALSE,eval=T, echo=F,results="hide"}
+#Installing package
+install.packages("c:/TFM/Code/armtrack_0.0.0.9000.tar.gz", repos = NULL, type = "source")
+library(armtrack)
+
+if (!require("ggplot2"))
+{
+  install.packages("ggplot2")
+  library(ggplot2)
+}
+if (!require("plotly"))
+{
+  install.packages("plotly")
+  library(plotly)
+}
+if (!require("RColorBrewer"))
+{
+  install.packages("RColorBrewer")
+  library(RColorBrewer)
+}
+if (!require("gplots"))
+{
+  install.packages("gplots")
+  library(gplots)
+}
+
+get_legend<-function(myggplot){
+  tmp <- ggplot_gtable(ggplot_build(myggplot))
+  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+  legend <- tmp$grobs[[leg]]
+  return(legend)
+}
+
+load("c:/TFM/Data/HeathyD.rda")
+load("c:/TFM/Data/BDistrophyD.rda")
+load("c:/TFM/Data/TotalD.rda")
+```
+
+On this document, we are going to perform a hierarchical clustering analysis together with a heatmap plot. We are going to do this study with correlation matrices in order to view variables relations. First with BMDistrophy group:
+
+```{r}
+mat_BMD<-cor(as.matrix(BMD[,2:(ncol(BMD)-1)]))
+coul <- colorRampPalette(brewer.pal(8, "YlOrRd"))(25)
+heatmap.2(mat_BMD, scale="column", col = coul,trace="none",main="BMDistrophy Data")
+```
+
+Here we observe that the variables can be divided in 3 big groups:
+
+1) Component 3 ("y") Hand and elbow positions
+2) Elbow and torso angles
+3) Rest of components of position vectors
+
+And now with Healthy group: 
+
+```{r}
+mat_HD<-cor(as.matrix(HD[,2:(ncol(HD)-1)]))
+coul <- colorRampPalette(brewer.pal(8, "YlOrRd"))(25)
+heatmap.2(mat_HD, scale="column", col = coul,trace="none",main="Healthy Data")
+```
+
+As we have seen on the correlation study made before, here the correlations are very similar and the 3 groups mentioned before could be the same with Healthy dataset.

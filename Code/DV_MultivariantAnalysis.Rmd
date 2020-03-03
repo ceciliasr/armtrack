@@ -1,0 +1,308 @@
+---
+title: "Multivariant Analysis"
+output: html_document
+---
+
+```{r, warning=FALSE, message=FALSE,eval=T, echo=F,results="hide"}
+#Installing package
+install.packages("c:/TFM/Code/armtrack_0.0.0.9000.tar.gz", repos = NULL, type = "source")
+library(armtrack)
+
+if (!require("ggplot2"))
+  {
+  install.packages("ggplot2")
+  library(ggplot2)
+}
+if (!require("gridExtra"))
+{
+  install.packages("gridExtra")
+  library(gridExtra)
+}
+if (!require("grid"))
+{
+  install.packages("grid")
+  library(grid)
+}
+if (!require("plotly"))
+{
+  install.packages("plotly")
+  library(plotly)
+}
+if (!require("factoextra"))
+{
+  install.packages("factoextra")
+  library(factoextra)
+}
+get_legend<-function(myggplot){
+  tmp <- ggplot_gtable(ggplot_build(myggplot))
+  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+  legend <- tmp$grobs[[leg]]
+  return(legend)
+}
+
+load("c:/TFM/Data/HeathyD.rda")
+load("c:/TFM/Data/BDistrophyD.rda")
+load("c:/TFM/Data/TotalD.rda")
+
+se<-seq(0,nrow(HD),10)
+HD1<-HD[rownames(HD) %in% se,]
+se<-seq(0,nrow(BMD),10)
+BMD1<-BMD[rownames(BMD) %in% se,]
+se<-seq(0,nrow(TD),10)
+TD1<-TD[rownames(TD) %in% se,]
+rm(se)
+```
+
+First of all, we will perform a PCA including all the variables in our database (unless quaternions and timestamp) and depending on the results, we will continue our study in one way or another. As we have a big quantity of data and the computations are too much slow, we are going to use the reduced database (the one with a frequency of 5 records per second).
+
+```{r,echo=F, warning=F, message=F}
+pca<-prcomp(BMD[,2:(ncol(BMD)-1)],center=TRUE,scale=T)
+print("BMDistrophy Data")
+summary(pca)
+pca_BMD<-as.data.frame(pca$x)
+save(pca_BMD,file="c:/TFM/Data/pca_BMD.rda")
+
+pca1<-prcomp(HD[,2:(ncol(HD)-1)],center=TRUE,scale=T)
+print("Healthy Data")
+summary(pca1)
+pca_HD<-as.data.frame(pca1$x)
+save(pca_HD,file="c:/TFM/Data/pca_HD.rda")
+```
+
+We can see that in BMDistrophy Data, with 6 principal components, we have a 90% of the variability of the data explained. However, in Healthy Data, with only 5 components, we obtain this % of variability explained. Let's see a screeplot in order to see more visually how it changes in each case.
+
+```{r,echo=F, warning=F, message=F}
+pca_df<-as.data.frame(pca$sdev)
+names(pca_df)<-"pca"
+pca1_df<-as.data.frame(pca1$sdev)
+names(pca1_df)<-"pca"
+pca_df<-rbind.data.frame(pca_df,pca1_df)
+pca_df$x<-rep(c(1:17),2)
+pca_df$type<-c(rep("BMDistrophy",17),rep("Healthy",17))
+pca_df$y<-c(pca_df$pca^2)/(sum(pca_df$pca[1:17]^2))*100
+pca_df$y<-c(pca_df$pca^2)/(sum(pca_df$pca[18:34]^2))*100
+
+scpl<-pca_df %>% ggplot(aes(pca_df$x, pca_df$y,color = type)) +
+   geom_line(data=pca_df, aes(pca_df$x, pca_df$y, color=type))+geom_point()+
+  scale_x_discrete(name ="ScatterPlot")+
+  scale_y_continuous(name="",breaks=seq(0,max(pca_df$y),5),
+  labels=c("0","5","10","15","20","25","30","35","40","45","50"),limits=c(0,max(pca_df$y)))
+
+scpl <- plotly_build(scpl)
+
+scpl$x$data[[1]]$text <- paste("Comp:",pca_df$x,
+                          "<br> Var.:", round(pca_df$y,3),
+                          "<br> Type:",pca_df$type)
+scpl$x$data[[2]]$text <- paste("Comp:",pca_df$x,
+                          "<br> Var.:", round(pca_df$y,3),
+                          "<br> Type:",pca_df$type)
+scpl$x$data[[3]]$text <- paste("Comp:",pca_df$x,
+                          "<br> Var.:", round(pca_df$y,3),
+                          "<br> Type:",pca_df$type)
+scpl
+```
+
+
+Now, we can see which variables explain better the first principal components:
+```{r,echo=F, warning=F, message=F}
+#Barplot of contribution of each variable to the two firsts PC:
+p1<-fviz_contrib(pca, choice = "var", axes = 1, top = 20,title=F)
+p1<-plotly_build(p1)
+p2<-fviz_contrib(pca, choice = "var", axes = 2, top = 20,title=F)
+p2<-plotly_build(p2)
+p3<-fviz_contrib(pca1, choice = "var", axes = 1, top = 20,title=F)
+p3<-plotly_build(p3)
+p4<-fviz_contrib(pca1, choice = "var", axes = 2, top = 20,title=F)
+p4<-plotly_build(p4)
+p <- subplot(p1, p3,nrows=2,titleX=T, titleY=T,margin=0.2)
+
+p %>% layout(annotations = list( 
+ list(x = 0.5 , y = 1.07, text = "BMDistrophy - PC1", showarrow = F, xref='paper', yref='paper'),
+ list(x = 0.5 , y = 0.4, text = "Healthy - PC1", showarrow = F, xref='paper', yref='paper')
+))
+```
+
+
+The first principal component is very similar in both data sets: there are 9 variables that contribute on more than a 6% of the information of the component. The most important variables are almost the same in both pca.
+
+```{r,echo=F, warning=F, message=F}
+p <- subplot(p2, p4,nrows=2,titleX=T, titleY=T,margin=0.2)
+
+p %>% layout(annotations = list( 
+ list(x = 0.5 , y = 1.07, text = "BMDistrophy - PC2", showarrow = F, xref='paper', yref='paper'),
+ list(x = 0.5 , y = 0.4, text = "Healthy - PC2", showarrow = F, xref='paper', yref='paper')))
+
+```
+
+On the second PC, we can observe some significant differences: 
+
+1) On BMDistrophy data, there are only 3 variables with more than a 6% of contribution while on healthy data we have 7 variables contributing on more than a 6%.
+
+2) On BMDistrophy data, the variables that contribute the most, are contributing on a 20%-30%. On the other hand, on Healthy data, the variables that contribute the most, are contributing on a 15%.
+
+3) On BMDistrophy data, the variable LHandPos_3 is contributing on a 30% while on Healthy data it contributes on a 6%.
+
+The following step is to *validate the PCA*. In order to do that, we divide the dataset in 2 subsets: train and test. We are going to perform the PCA on the train subset and then we are goin to perform the same procedure on the test one. The results should be similar on the full dataset, on the train and on the test one. As the data is a time serie, we are not going to take the first n rows of the dataset and the last m rows of the dataset (n+m=nrow) because it depends on time (it will be a later analysis). So, we will take a random sample of the dataset as the 1st group and another sample (different to the first one) as the 2nd group. First we perform this analysis in BMDistrophy data:
+
+```{r,echo=F, warning=F, message=F}
+set.seed(123)
+a<-sample(c(1:round(nrow(BMD)/2,0)),1000,replace=F)
+b<-sample(c(round(nrow(BMD)/2,0):nrow(BMD)),1000,replace=F)
+
+BMD2<-BMD[which(rownames(BMD) %in% a),]
+BMD3<-BMD[which(rownames(BMD) %in% b),]
+
+pca2<-prcomp(BMD2[,2:(ncol(BMD2)-1)],center=TRUE,scale=T)
+print("BMDistrophy Part 1")
+summary(pca2)
+
+pca3<-prcomp(BMD3[,2:(ncol(BMD3)-1)],center=TRUE,scale=T)
+print("BMDistrophy Part 2")
+summary(pca3)
+
+pca_df<-as.data.frame(pca2$sdev)
+names(pca_df)<-"pca"
+pca1_df<-as.data.frame(pca3$sdev)
+names(pca1_df)<-"pca"
+pca_df<-rbind.data.frame(pca_df,pca1_df)
+pca_df$x<-rep(c(1:17),2)
+pca_df$type<-c(rep("BMDistrophy 1",17),rep("BMDistrophy 2",17))
+pca_df$y<-c(pca_df$pca^2)/(sum(pca_df$pca[1:17]^2))*100
+pca_df$y<-c(pca_df$pca^2)/(sum(pca_df$pca[18:34]^2))*100
+
+scpl<-pca_df %>% ggplot(aes(pca_df$x, pca_df$y,color = type)) +
+   geom_line(data=pca_df, aes(pca_df$x, pca_df$y, color=type))+geom_point()+
+  scale_x_discrete(name ="ScatterPlot")+
+  scale_y_continuous(name="",breaks=seq(0,max(pca_df$y),5),
+  labels=c("0","5","10","15","20","25","30","35","40","45","50","55"),limits=c(0,max(pca_df$y)))
+
+scpl <- plotly_build(scpl)
+
+scpl$x$data[[1]]$text <- paste("Comp:",pca_df$x,
+                          "<br> Var.:", round(pca_df$y,3),
+                          "<br> Type:",pca_df$type)
+scpl$x$data[[2]]$text <- paste("Comp:",pca_df$x,
+                          "<br> Var.:", round(pca_df$y,3),
+                          "<br> Type:",pca_df$type)
+scpl$x$data[[3]]$text <- paste("Comp:",pca_df$x,
+                          "<br> Var.:", round(pca_df$y,3),
+                          "<br> Type:",pca_df$type)
+scpl
+#Barplot of contribution of each variable to the two firsts PC:
+p1<-fviz_contrib(pca2, choice = "var", axes = 1, top = 20,title=F)
+p1<-plotly_build(p1)
+p2<-fviz_contrib(pca2, choice = "var", axes = 2, top = 20,title=F)
+p2<-plotly_build(p2)
+p3<-fviz_contrib(pca3, choice = "var", axes = 1, top = 20,title=F)
+p3<-plotly_build(p3)
+p4<-fviz_contrib(pca3, choice = "var", axes = 2, top = 20,title=F)
+p4<-plotly_build(p4)
+p <- subplot(p1, p3,nrows=2,titleX=T, titleY=T,margin=0.2)
+
+p %>% layout(annotations = list( 
+ list(x = 0.5 , y = 1.07, text = "BMDistrophy - Part 1", showarrow = F, xref='paper', yref='paper'),
+ list(x = 0.5 , y = 0.4, text = "BMDistrophy - Part 2", showarrow = F, xref='paper', yref='paper')
+))
+p <- subplot(p2, p4,nrows=2,titleX=T, titleY=T,margin=0.2)
+
+p %>% layout(annotations = list( 
+ list(x = 0.5 , y = 1.07, text = "BMDistrophy - Part 1", showarrow = F, xref='paper', yref='paper'),
+ list(x = 0.5 , y = 0.4, text = "BMDistrophy - Part 2", showarrow = F, xref='paper', yref='paper')))
+
+```
+
+Although the scatterplot is quite different in both parts (we will see it later) of the dataset, we can validate the PCA because:
+
+1) With 4 principal components, it explains more than a 80% of data variability as it makes in the PCA performed with the total database.
+
+2) The variables contribution to the 2 firsts components is quite similar to the one with the whole database.
+
+Let's see what happens in healthy data:
+
+```{r,echo=F, warning=F, message=F}
+a<-sample(c(1:round(nrow(HD)/2,0)),1000,replace=F)
+b<-sample(c(round(nrow(HD)/2,0):nrow(HD)),1000,replace=F)
+
+HD2<-HD[which(rownames(HD) %in% a),]
+HD3<-HD[which(rownames(HD) %in% b),]
+
+pca4<-prcomp(HD2[,2:(ncol(HD2)-1)],center=TRUE,scale=T)
+print("Healthy Part 1")
+summary(pca4)
+
+pca5<-prcomp(HD3[,2:(ncol(HD3)-1)],center=TRUE,scale=T)
+print("Healthy Part 2")
+summary(pca5)
+
+pca_df<-as.data.frame(pca4$sdev)
+names(pca_df)<-"pca"
+pca1_df<-as.data.frame(pca5$sdev)
+names(pca1_df)<-"pca"
+pca_df<-rbind.data.frame(pca_df,pca1_df)
+pca_df$x<-rep(c(1:17),2)
+pca_df$type<-c(rep("Healthy 1",17),rep("Healthy 2",17))
+pca_df$y<-c(pca_df$pca^2)/(sum(pca_df$pca[1:17]^2))*100
+pca_df$y<-c(pca_df$pca^2)/(sum(pca_df$pca[18:34]^2))*100
+
+scpl<-pca_df %>% ggplot(aes(pca_df$x, pca_df$y,color = type)) +
+   geom_line(data=pca_df, aes(pca_df$x, pca_df$y, color=type))+geom_point()+
+  scale_x_discrete(name ="ScatterPlot")+
+  scale_y_continuous(name="",breaks=seq(0,max(pca_df$y),5),
+  labels=c("0","5","10","15","20","25","30","35","40","45","50","55","60"),limits=c(0,max(pca_df$y)))
+
+scpl <- plotly_build(scpl)
+
+scpl$x$data[[1]]$text <- paste("Comp:",pca_df$x,
+                          "<br> Var.:", round(pca_df$y,3),
+                          "<br> Type:",pca_df$type)
+scpl$x$data[[2]]$text <- paste("Comp:",pca_df$x,
+                          "<br> Var.:", round(pca_df$y,3),
+                          "<br> Type:",pca_df$type)
+scpl$x$data[[3]]$text <- paste("Comp:",pca_df$x,
+                          "<br> Var.:", round(pca_df$y,3),
+                          "<br> Type:",pca_df$type)
+scpl
+#Barplot of contribution of each variable to the two firsts PC:
+p1<-fviz_contrib(pca4, choice = "var", axes = 1, top = 20,title=F)
+p1<-plotly_build(p1)
+p2<-fviz_contrib(pca4, choice = "var", axes = 2, top = 20,title=F)
+p2<-plotly_build(p2)
+p3<-fviz_contrib(pca5, choice = "var", axes = 1, top = 20,title=F)
+p3<-plotly_build(p3)
+p4<-fviz_contrib(pca5, choice = "var", axes = 2, top = 20,title=F)
+p4<-plotly_build(p4)
+p <- subplot(p1, p3,nrows=2,titleX=T, titleY=T,margin=0.2)
+
+p %>% layout(annotations = list( 
+ list(x = 0.5 , y = 1.07, text = "Healthy - Part 1", showarrow = F, xref='paper', yref='paper'),
+ list(x = 0.5 , y = 0.4, text = "Healthy - Part 2", showarrow = F, xref='paper', yref='paper')
+))
+p <- subplot(p2, p4,nrows=2,titleX=T, titleY=T,margin=0.2)
+
+p %>% layout(annotations = list( 
+ list(x = 0.5 , y = 1.07, text = "Healthy - Part 1", showarrow = F, xref='paper', yref='paper'),
+ list(x = 0.5 , y = 0.4, text = "Healthy - Part 2", showarrow = F, xref='paper', yref='paper')))
+
+```
+
+Here the conclusions are the same as before, we obtain very similar results on the 3 PCA performed.
+
+Now, we are going to devide the dataset in 10 intervals in order to perform a PCA in each interval. The aim of this study is to realize if the data changes along time or it is similar. With this purpose, we have developped an R function called 'winpca' (Window Principal Component Analysis) that makes exactly what we want. This function is included on the 'armtrack' package. Let's do it for the BMDistrophy data first:
+
+```{r, warning=F, message=F}
+var<-"Timestamp" #Time variable
+interval<-10 #Number of time interval to devide
+p<-winpca(BMD,var,interval)
+p
+```
+
+We can observe that on the first datasets, the variability explained by the first component is higher than on the other ones. This behavior could be explained because there is less variability on data at the beginning because the person who was wearing the ArmTracker was not on movement. We will verify this hypothesis with deeper analysis. Another comment here, is that with 4 principal components it explain more than a 80% of the data variability in all cases (as it happens with the total dataset).
+
+Now, let's do the same analysis but with the 'Healthy' dataset:
+
+```{r, warning=F, message=F}
+p<-winpca(HD,var,interval)
+p
+```
+
+Here we also obtain different results on the scatterplot, it also could be explained because of more or less movement on different times. We will be able to check it when we perform new tests with Arm Tracker. Also, with 4 principal components, it can be explained more than a 80% of data variability (as it happens with the total dataset).
