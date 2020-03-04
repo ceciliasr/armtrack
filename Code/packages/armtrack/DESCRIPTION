@@ -1,0 +1,18 @@
+Package: armtrack
+Title: 'Arm Tracker Data Treatment'
+Version: 0.0.0.9000
+Authors@R: 
+    person(given = "Cecilia",
+           family = "Siliato",
+           role = c("aut", "cre"),
+           email = "cecilia.siliato@gmail.com",
+           comment = c(ORCID = "YOUR-ORCID-ID"))
+Description: The idea of this package is to process data coming from arms movement. This package envolves all the necessary process in order to fully understand the data. It contains functions whose purpose is to check the input data, impute missing data (if it is needed) and make some descriptive analysis. On the other hand, it has some functions in orderto perform a deeply analysis on the data including ACP, clustering functions,... Finally it also includes different types of plots.
+License: GPL-2 | GPL-3
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 6.1.99.9000
+NeedsCompilation: no
+Packaged: 2019-09-16 11:04:46 UTC; cecilia.siliato
+Author: Cecilia Siliato [aut, cre] (<https://orcid.org/YOUR-ORCID-ID>)
+Maintainer: Cecilia Siliato <cecilia.siliato@gmail.com>
